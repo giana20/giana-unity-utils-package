@@ -9,7 +9,7 @@ using UnityEditor;
 namespace Giana.UnityUtils
 {
 /// <summary>
-/// AAA-grade object pooling system for Unity with advanced features.
+/// Object pooling system for Unity.
 ///
 /// <para><b>Key Features:</b></para>
 /// <list type="bullet">

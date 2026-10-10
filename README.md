@@ -5,7 +5,7 @@ GianaUtils is a comprehensive Unity utility library designed to accelerate game 
 ## Modules
 
 *   **[Core](./Core/README.md)**
-    Contains foundational patterns such as Singletons (`MonoSingleton`, `LazyMonoSingleton`) and a high-performance AAA-grade `ObjectPoolManager` for managing object lifecycles efficiently.
+    Contains foundational patterns such as Singletons (`MonoSingleton`, `LazyMonoSingleton`) and a high-performance `ObjectPoolManager` for managing object lifecycles efficiently.
 *   **[UI](./UI/README.md)**
     A suite of tools for building and managing dynamic user interfaces, including menu navigation, event system handling, dynamic menu generation (`UIBuilder`), and UI transition animations.
 *   **[SceneInitialization](./SceneInitialization/README.md)**

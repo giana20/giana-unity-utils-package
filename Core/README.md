@@ -9,7 +9,7 @@ The Core module provides foundational systems and design patterns that are frequ
 *   **`LazyMonoSingleton<T>`**: A singleton that only instantiates itself when it is first accessed, saving resources and ensuring it only exists when required.
 
 ### Object Pooling
-*   **`ObjectPoolManager`**: An advanced, AAA-grade object pooling system designed to minimize garbage collection and instantiate frame spikes.
+*   **`ObjectPoolManager`**: Object pooling system designed to minimize garbage collection and instantiate frame spikes.
     *   **Features:** Instance ID-based tracking, async instantiation, per-pool capacity limits, analytics, and automatic culling strategies.
     *   **Usage Example:**
         ```csharp
