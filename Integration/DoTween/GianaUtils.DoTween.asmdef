@@ -1,0 +1,19 @@
+{
+    "name": "GianaUtils.DoTween",
+    "rootNamespace": "Giana.UnityUtils.DoTween",
+    "references": [
+        "GUID:7458f4e287fc0af3990b7932cfa31f34",
+        "GUID:d446c939ce228257a90b23668cd44c69"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [
+        "GIANAUTILS_DOTWEEN"
+    ],
+    "versionDefines": [],
+    "noEngineReferences": false
+}
