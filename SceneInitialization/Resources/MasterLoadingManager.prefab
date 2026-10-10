@@ -240,5 +240,6 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 11a5aca8d3a96bce69320bacd2ad291d, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::LoadingOverlayController
-  _overlayImage: {fileID: 3982104305660540158}
+  _overlayImages:
+  - {fileID: 3982104305660540158}
   _fadeDuration: 0.4

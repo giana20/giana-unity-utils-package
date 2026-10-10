@@ -17,7 +17,7 @@ namespace Giana.UnityUtils
         [Header("Fade Settings")]
         [Tooltip("The Image component used as the full-screen overlay.")]
         [SerializeField]
-        private Image _overlayImage;
+        private Image[] _overlayImages;
 
         [Tooltip("Duration of the fade transition in seconds.")]
         [Min(0f)]
@@ -40,11 +40,14 @@ namespace Giana.UnityUtils
         /// <param name="visible">True to show the overlay, false to hide it instantly.</param>
         public void SetInstant(bool visible)
         {
-            Color color = _overlayImage.color;
-            color.a = visible ? 1f : 0f;
-            _overlayImage.color = color;
+            foreach (Image image in _overlayImages)
+            {
+                Color color = image.color;
+                color.a = visible ? 1f : 0f;
+                image.color = color;
 
-            _overlayImage.gameObject.SetActive(visible);
+                image.gameObject.SetActive(visible);
+            }
         }
 
         /// <summary>
@@ -53,8 +56,11 @@ namespace Giana.UnityUtils
         /// <param name="ct">Cancellation token to stop the fade operation.</param>
         public async Awaitable FadeInAsync(CancellationToken ct)
         {
-            _overlayImage.gameObject.SetActive(true);
-            await FadeAlpahAsyn(1f, ct);
+            foreach (Image image in _overlayImages)
+            {
+                image.gameObject.SetActive(true);
+            }
+            await FadeAlphaAsync(1f, ct);
         }
 
         /// <summary>
@@ -63,8 +69,11 @@ namespace Giana.UnityUtils
         /// <param name="ct">Cancellation token to stop the fade operation.</param>
         public async Awaitable FadeOutAsync(CancellationToken ct)
         {
-            await FadeAlpahAsyn(0f, ct);
-            _overlayImage.gameObject.SetActive(false);
+            await FadeAlphaAsync(0f, ct);
+            foreach (Image image in _overlayImages)
+            {
+                image.gameObject.SetActive(false);
+            }
         }
 
         /// <summary>
@@ -72,11 +81,18 @@ namespace Giana.UnityUtils
         /// </summary>
         /// <param name="alpha">Target alpha value (clamped between 0 and 1).</param>
         /// <param name="ct">Cancellation token to stop the fade operation.</param>
-        public async Awaitable FadeAlpahAsyn(float alpha, CancellationToken ct)
+        public async Awaitable FadeAlphaAsync(float alpha, CancellationToken ct)
         {
-            float startAlpha = _overlayImage.color.a;
-            float elapsedTime = 0;
+            // Cache the starting alpha for each image before the loop starts
+            int count = _overlayImages.Length;
+            float[] startAlphas = new float[count];
 
+            for (int i = 0; i < count; i++)
+            {
+                startAlphas[i] = _overlayImages[i].color.a;
+            }
+
+            float elapsedTime = 0f;
             ct.ThrowIfCancellationRequested();
 
             while (elapsedTime < _fadeDuration)
@@ -84,16 +100,23 @@ namespace Giana.UnityUtils
                 elapsedTime += Time.deltaTime;
                 float t = Mathf.Clamp01(elapsedTime / _fadeDuration);
 
-                Color color = _overlayImage.color;
-                color.a = Mathf.Lerp(startAlpha, alpha, t);
-                _overlayImage.color = color;
+                for (int i = 0; i < count; i++)
+                {
+                    Color color = _overlayImages[i].color;
+                    color.a = Mathf.Lerp(startAlphas[i], alpha, t);
+                    _overlayImages[i].color = color;
+                }
 
                 await Awaitable.NextFrameAsync();
             }
 
-            Color finalColor = _overlayImage.color;
-            finalColor.a = alpha;
-            _overlayImage.color = finalColor;
+            // Ensure final values are exact
+            for (int i = 0; i < count; i++)
+            {
+                Color finalColor = _overlayImages[i].color;
+                finalColor.a = alpha;
+                _overlayImages[i].color = finalColor;
+            }
         }
         #endregion
     }
