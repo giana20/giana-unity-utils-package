@@ -22,7 +22,6 @@ Menu navigation and animation for uGUI with the Input System: keyboard, mouse, g
 | `IUITransition` | Enter/exit animation contract |
 | `DefaultUITransition` | Dependency-free coroutine fade + slide |
 | `MenuAnimatorBase`, `DefaultMenuAnimator` | Selection scale animation abstraction + coroutine default |
-| `MobileUIOnly` | Keeps an object active only when a touchscreen exists |
 
 ---
 
@@ -154,10 +153,6 @@ void PlayExitAnimation(Action onAnimationComplete);  // MUST invoke the callback
 - Must live on the **same GameObject as the Selectable** (`UIBuilder` uses `TryGetComponent`). No transition means the item pops in/out instantly.
 - A missing exit callback leaves the menu locked forever. Use unscaled time if menus must work during pause.
 - Implementations: `DefaultUITransition` (needs a `CanvasGroup` on the root; fades and slides the root's anchored position, so it is best with items not driven by a layout group's position), `Samples/SampleUITransition` (child `Visual`, fade+scale+slide), `FeelUITransition` ([Integration](../Integration/README.md)). Writing a DOTween one is ~10 lines (see the documentation).
-
-## `MobileUIOnly`
-
-On `Start`, keeps the GameObject active if `Touchscreen.current != null`, else deactivates it. One-shot check (touch laptops and the Device Simulator count as touch).
 
 ## Tuning
 
