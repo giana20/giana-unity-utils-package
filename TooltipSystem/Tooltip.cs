@@ -9,7 +9,6 @@ namespace Giana.UnityUtils
     /// Displays a tooltip UI that follows the mouse cursor and automatically flips its pivot
     /// based on which screen quadrant the cursor is in, keeping the tooltip fully on-screen.
     /// </summary>
-    [ExecuteInEditMode]
     public class Tooltip : MonoBehaviour
     {
         #region Inspector Fields
@@ -142,6 +141,9 @@ namespace Giana.UnityUtils
         /// </summary>
         private void AdjustPosition()
         {
+            if(_rectTransform == null)
+                return;
+
             Vector2 mousePos = Pointer.current.position.ReadValue();
             Vector2 normalizedPosition = new(mousePos.x / Screen.width, mousePos.y / Screen.height);
             

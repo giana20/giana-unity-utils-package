@@ -100,7 +100,8 @@ This ensures the tooltip never clips outside the visible screen edges, without n
 
 ## API Reference & Scripting
 
-You can also display or hide tooltips programmatically from any script:
+### 1. Direct Global Calls
+You can display or hide tooltips programmatically from any script using the global singleton:
 
 ```csharp
 using Giana.UnityUtils;
@@ -128,17 +129,51 @@ public class InventorySlot : MonoBehaviour
 }
 ```
 
+### 2. Updating `TooltipTrigger` at Runtime
+When using [TooltipTrigger](file:///home/giana/Unity/Packages/com.giana.giana-unity-utils/TooltipSystem/TooltipTrigger.cs#L11-L129) on interactive elements (e.g. inventory slots, equipment, or dynamic 3D interactables), you can dynamically change its text via code without re-instantiating the component:
+
+```csharp
+using Giana.UnityUtils;
+using UnityEngine;
+
+public class EquipmentSlot : MonoBehaviour
+{
+    [SerializeField] private TooltipTrigger _tooltipTrigger;
+
+    public void SetEquippedItem(string itemName, int attackBonus, int durability)
+    {
+        // Dynamically update the tooltip header and content
+        _tooltipTrigger.SetHeader(itemName);
+        _tooltipTrigger.SetContent($"Attack: +{attackBonus}\nDurability: {durability}%");
+    }
+
+    public void ClearSlot()
+    {
+        _tooltipTrigger.SetHeader(string.Empty);
+        _tooltipTrigger.SetContent("Empty Slot");
+    }
+}
+```
+
 ---
 
 ## Component Reference
 
 ### `TooltipSystem`
+**Inspector Fields:**
 | Property | Type | Description |
 |---|---|---|
 | `_tooltip` | `Tooltip` | Reference to the `Tooltip` component on the visual prefab |
 | `_showDebugLogs` | `bool` | Enables editor console logs for tooltip `Show` and `Hide` calls |
 
+**Public Methods:**
+| Method | Description |
+|---|---|
+| `Show(string content, string header = "")` | Displays the tooltip with body text and optional header |
+| `Hide()` | Hides the tooltip UI |
+
 ### `Tooltip`
+**Inspector Fields:**
 | Property | Type | Description |
 |---|---|---|
 | `_headerField` | `TextMeshProUGUI` | Text component for the header. Automatically deactivated if header is empty |
@@ -147,13 +182,25 @@ public class InventorySlot : MonoBehaviour
 | `_characterWrapLimit` | `int` | Character count threshold above which `_layoutElement` is activated (wrapping kicks in) |
 | `_showDebugLogs` | `bool` | Enables warning logs if UI references are missing |
 
+**Public Methods:**
+| Method | Description |
+|---|---|
+| `SetText(string content, string header)` | Sets content and header text, computes character wrapping threshold, and refreshes position |
+
 ### `TooltipTrigger`
+**Inspector Fields:**
 | Property | Type | Description |
 |---|---|---|
 | `_header` | `string` | Header text to display |
 | `_content` | `string` (`[TextArea]`) | Main body text to display |
 | `_delayedShowupTime` | `float` | Delay in seconds before showing tooltip after pointer enter (uses unscaled time) |
 | `_showDebugLogs` | `bool` | Enables editor console logs when triggering tooltips |
+
+**Public Methods:**
+| Method | Description |
+|---|---|
+| `SetHeader(string header)` | Sets the header text for the tooltip at runtime |
+| `SetContent(string content)` | Sets the content body text for the tooltip at runtime |
 
 ---
 

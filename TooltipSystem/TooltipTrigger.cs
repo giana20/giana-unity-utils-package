@@ -108,6 +108,24 @@ namespace Giana.UnityUtils
             TooltipSystem.Instance.Show(_content, _header);
         }
 
+        /// <summary>
+        /// Sets the header text for the tooltip.
+        /// </summary>
+        /// <param name="header">The new header text.</param>
+        public void SetHeader(string header)
+        {
+            _header = header;
+        }
+
+        /// <summary>
+        /// Sets the content text for the tooltip.
+        /// </summary>
+        /// <param name="content">The new content text.</param>
+        public void SetContent(string content)
+        {
+            _content = content;
+        }
+
         #endregion
     }
 }
