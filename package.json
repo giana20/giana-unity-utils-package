@@ -1,7 +1,7 @@
 {
   "name": "com.giana.unityutils",
   "displayName": "Giana Unity Utils",
-  "version": "0.1.0",
+  "version": "1.1.4",
   "unity": "6000.6",
   "unityRelease": "3f1",
   "description": "Comprehensive Unity utility library providing core architecture patterns (singletons, AAA object pooling), modular UI frameworks, asynchronous scene initialization, and integrations with DOTween and Feel.",
