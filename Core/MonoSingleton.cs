@@ -21,6 +21,10 @@ namespace Giana.UnityUtils
         [field: Tooltip("Priority for the Awake initialization step (higher executes first).")]
         [field: SerializeField]
         public int AwakePriority { get; set; }
+
+        [field: Tooltip("Set this to true if this singleton should persist across scene and dont get destroyed when changing scene.")]
+        [field: SerializeField]
+        protected virtual bool PersistAcrossScenes => true;
         #endregion
 
         #region Properties & Private Fields
@@ -51,7 +55,8 @@ namespace Giana.UnityUtils
             if (_instance == null)
             {
                 _instance = this as T;
-                DontDestroyOnLoad(gameObject);
+                if (PersistAcrossScenes)
+                    DontDestroyOnLoad(gameObject);
             }
             else if (_instance != this)
             {
