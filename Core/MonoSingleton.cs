@@ -24,7 +24,7 @@ namespace Giana.UnityUtils
 
         [Tooltip("Set this to true if this singleton should persist across scene and dont get destroyed when changing scene.")]
         [SerializeField]
-        protected virtual bool _persistAcrossScenes = true;
+        protected bool _persistAcrossScenes = true;
         #endregion
 
         #region Properties & Private Fields
