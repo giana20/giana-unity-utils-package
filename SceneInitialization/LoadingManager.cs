@@ -173,7 +173,16 @@ public class LoadingManager : MonoBehaviour
                 await Awaitable.NextFrameAsync(ct);
             }
 
-            Scene newScene = SceneManager.GetSceneByName(sceneName);
+            Scene newScene = default;
+            for (int i = SceneManager.sceneCount - 1; i >= 0; i--)
+            {
+                Scene s = SceneManager.GetSceneAt(i);
+                if (s != oldScene && s.name == sceneName)
+                {
+                    newScene = s;
+                    break;
+                }
+            }
             SceneManager.SetActiveScene(newScene);
 
             if (oldScene.IsValid() && oldScene != newScene)
