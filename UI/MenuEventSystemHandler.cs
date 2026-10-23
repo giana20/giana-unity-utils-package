@@ -20,6 +20,10 @@ namespace Giana.UnityUtils
         [field: SerializeField]
         public int AwakePriority { get; set; }
 
+        [Tooltip("If true it set this gameobject as active on awake.")]
+        [SerializeField]
+        private bool _showOnAwake = false;
+
         [Space(10)]
         [Header("References")]
         [Tooltip("List of UI Selectable elements managed by this handler.")]
@@ -56,7 +60,8 @@ namespace Giana.UnityUtils
                 _scales.TryAdd(selectable, selectable.transform.localScale);
             }
 
-            gameObject.SetActive(true);
+            if(_showOnAwake)
+                gameObject.SetActive(true);
         }
 #pragma warning restore CS1998
 
