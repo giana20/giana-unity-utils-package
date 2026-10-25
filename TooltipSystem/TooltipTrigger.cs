@@ -33,6 +33,8 @@ namespace Giana.UnityUtils
         #region Private Variables
 
         private Coroutine _delayedShowCoroutine;
+        private System.Func<string> _headerProvider;
+        private System.Func<string> _contentProvider;
 
         #endregion
 
@@ -105,7 +107,9 @@ namespace Giana.UnityUtils
                 Debug.Log($"[TooltipTrigger] Showing tooltip for: {gameObject.name}");
             }
 #endif
-            TooltipSystem.Instance.Show(_content, _header);
+            string header  = _headerProvider  != null ? _headerProvider()  : _header;
+            string content = _contentProvider != null ? _contentProvider() : _content;
+            TooltipSystem.Instance.Show(content, header);
         }
 
         /// <summary>
@@ -124,6 +128,13 @@ namespace Giana.UnityUtils
         public void SetContent(string content)
         {
             _content = content;
+        }
+
+        /// <summary>Optional: resolve text at show time (e.g. for localization). Overrides the inspector strings.</summary>
+        public void SetProviders(System.Func<string> header, System.Func<string> content)
+        {
+            _headerProvider = header;
+            _contentProvider = content;
         }
 
         #endregion

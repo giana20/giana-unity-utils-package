@@ -63,6 +63,7 @@ On any GameObject that should display a tooltip when hovered:
    - **Header**: Optional title displayed in bold/larger font (leave empty to hide the header field entirely).
    - **Content**: The descriptive body text (supports multiline text).
    - **Delayed Showup Time**: Delay in seconds before displaying the tooltip (default `0.1s`).
+3. *(Optional)* For localized or computed text, leave Header/Content empty and call `SetProviders()` from code. See [Dynamic Text Providers](#3-dynamic-text-providers-localization-computed-values).
 
 ---
 
@@ -95,6 +96,13 @@ This ensures the tooltip never clips outside the visible screen edges, without n
 
 ### Realtime Delay
 `TooltipTrigger` shows tooltips using `WaitForSecondsRealtime(_delayedShowupTime)`. This ensures tooltips continue to open smoothly even if gameplay is paused (`Time.timeScale = 0`). If the pointer exits before the delay completes, the coroutine is cancelled immediately.
+
+### Text Resolution Order
+When the delay finishes, `TooltipTrigger` resolves the text to show:
+1. If a provider was set through `SetProviders()`, it is invoked **at show time** and its result is used.
+2. Otherwise the serialized `_header` / `_content` strings (or whatever `SetHeader()` / `SetContent()` last set) are used.
+
+Header and content are resolved independently, so you can provide only one of them. Because providers run on every show, text is always fresh (e.g. after a language change or a stat change) with no event subscriptions needed.
 
 ---
 
@@ -155,6 +163,71 @@ public class EquipmentSlot : MonoBehaviour
 }
 ```
 
+### 3. Dynamic Text Providers (Localization, Computed Values)
+`SetHeader()` / `SetContent()` store a fixed string. If the text can change between hovers (a language switch, live stats, a multiplier that grows), use `SetProviders()` instead. It takes two `Func<string>` callbacks that are evaluated **each time the tooltip is about to show**:
+
+```csharp
+// Signature
+public void SetProviders(System.Func<string> header, System.Func<string> content);
+```
+
+Either argument may be `null` to fall back to the inspector/`Set*` string for that field. Passing `null` for both restores the default behavior.
+
+The package itself has **no dependency on the Localization package**. The game-side code supplies the callbacks. Example with Unity Localization and a bumper:
+
+```csharp
+using Giana.UnityUtils;
+using UnityEngine;
+using UnityEngine.Localization;
+
+[RequireComponent(typeof(TooltipTrigger), typeof(Bumper))]
+public class BumperTooltip : MonoBehaviour
+{
+    [SerializeField] private LocalizedString _name;
+    [SerializeField] private LocalizedString _description;
+    [SerializeField] private LocalizedString _format;   // shared "tooltip.format" entry
+
+    private Bumper _bumper;
+
+    private void Awake()
+    {
+        _bumper = GetComponent<Bumper>();
+        GetComponent<TooltipTrigger>().SetProviders(
+            () => _name.GetLocalizedString(),
+            BuildContent
+        );
+    }
+
+    private string BuildContent() =>
+        _format.GetLocalizedString(
+            _description.GetLocalizedString(),
+            _bumper.ScoreOnHit,
+            _bumper.PowerCooldown
+        );
+}
+```
+
+#### Keeping colors out of your strings (TMP Style Sheets)
+Because tooltip text is rich text, avoid hard-coding hex colors in every localized entry. Define them once in a **TMP Style Sheet** (*Create → TextMeshPro → Style Sheet*, then set it as the default in *Project Settings → TextMeshPro → Settings*) and reference them with `<style="...">`:
+
+| Style | Opening definition | Closing definition |
+|---|---|---|
+| `Desc` | `<color=#c7dcd0>` | `</color>` |
+| `Sep` | `<voffset=0.2em><color=#625565>──────</color></voffset>` | *(empty)* |
+| `Score` | `<color=#91db69>` | `</color>` |
+| `Cooldown` | `<color=#f57d4a>` | `</color>` |
+
+A single shared Smart String then serves every tooltip in every language (`{0}` = description, `{1}` = score, `{2}` = cooldown):
+
+```
+<style="Desc">{0}</style>
+<style="Sep">
+<b>Score:</b> <style="Score">+{1}</style> pts
+<b>Cooldown:</b> <style="Cooldown">{2:0.0}s</style>
+```
+
+Changing a color later means editing one style. No localized string needs to be touched.
+
 ---
 
 ## Component Reference
@@ -201,6 +274,7 @@ public class EquipmentSlot : MonoBehaviour
 |---|---|
 | `SetHeader(string header)` | Sets the header text for the tooltip at runtime |
 | `SetContent(string content)` | Sets the content body text for the tooltip at runtime |
+| `SetProviders(Func<string> header, Func<string> content)` | Registers callbacks evaluated every time the tooltip is shown. They take priority over the inspector/`Set*` strings. Use for localization or live values; pass `null` to fall back per field |
 
 ---
 
@@ -210,4 +284,7 @@ public class EquipmentSlot : MonoBehaviour
 - **Tooltip looks tiny or huge on different displays:** Ensure `Canvas Scaler` is set to `Scale With Screen Size` on the `Tooltip Canvas`.
 - **Tooltip appears behind other UI windows:** Ensure `Tooltip Canvas` has a higher `Sorting Order` than your gameplay or UI canvases (e.g. `32767`).
 - **3D object not triggering tooltip:** Ensure the 3D object has a `Collider`, and either the camera has a `PhysicsRaycaster` (for EventSystem) or Unity legacy mouse events are active in the project.
+- **Localized text doesn't change after switching language:** Make sure the text comes from `SetProviders()` (evaluated on each show) rather than a one-time `SetHeader()` / `SetContent()` call made before the language switched.
+- **`<style="...">` shows up as raw text:** The style name doesn't exist in the style sheet used by the tooltip's TMP components, or the style sheet isn't set as the default in *Project Settings → TextMeshPro → Settings*. Check for typos in the style name.
+- **Localized string is empty on the first frames:** `GetLocalizedString()` is synchronous and requires Localization to be initialized. Providers run on hover, so this is rarely an issue, but avoid calling it from `Awake` before your loading flow finishes.
 - **NullReferenceException on `TooltipSystem.Instance`:** Make sure the `Tooltip Canvas` (with `TooltipSystem`) exists in the scene and was initialized via `LoadingManager` or scene startup.
