@@ -80,6 +80,11 @@ namespace Giana.UnityUtils
         public int IndexOf(DraggableItem item) => _items.IndexOf(item);
 
         internal DragAnimatorBase Animator => _animator;
+        internal float SwapDuration => _swapDuration;
+        internal AnimationCurve SwapEase => _swapEase;
+        internal float RemoveDuration => _removeDuration;
+        internal AnimationCurve RemoveEase => _removeEase;
+        internal bool DestroyOnRemove => _destroyOnRemove;
         internal int DragSortingOrder => _dragSortingOrder;
         internal RectTransform DragLayer => _dragLayer != null ? _dragLayer : (RectTransform)_rootCanvas.transform;
 
@@ -158,6 +163,9 @@ namespace Giana.UnityUtils
             _items.RemoveAll(i => i == null);
             foreach (var item in _items) item.Bind(this);
         }
+
+        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+        private static void ResetStatics() => s_active.Clear(); // play mode without domain reload
 
         private void OnEnable() => s_active.Add(this);
         private void OnDisable() => s_active.Remove(this);
@@ -264,14 +272,14 @@ namespace Giana.UnityUtils
             _removalPending = false;
         }
 
-        internal void HandleDrag(DraggableItem item, UnityEngine.EventSystems.PointerEventData eventData)
+        internal void HandleDrag(DraggableItem item, UnityEngine.EventSystems.PointerEventData eventData, bool overDropZone)
         {
             if (item != _dragged) return;
 
             RectTransformUtility.ScreenPointToLocalPointInRectangle(_container, eventData.position, EventCamera, out Vector2 local);
 
             DraggableList hovered = FindTransferTarget(eventData.position);
-            bool wantsRemove = _draggingOutRemovesEntry && hovered == null && IsOutsideRemoveThreshold(local);
+            bool wantsRemove = _draggingOutRemovesEntry && hovered == null && !overDropZone && IsOutsideRemoveThreshold(local);
 
             if (wantsRemove != _removalPending)
             {
@@ -279,7 +287,7 @@ namespace Giana.UnityUtils
                 CollapsePlaceholder(item, wantsRemove);
             }
 
-            if (_removalPending || hovered != null) return;
+            if (_removalPending || hovered != null || overDropZone) return;
             ReorderTowards(local);
         }
 
@@ -304,6 +312,21 @@ namespace Giana.UnityUtils
 
             item.AnimateReturn(_swapDuration, _swapEase);
             if (_currentIndex != _startIndex) OrderChanged?.Invoke(_items);
+        }
+
+        /// <summary>The item was released on an accepting <see cref="DropZone"/>: cancel list-side drag state.</summary>
+        internal void HandleDroppedOnZone(DraggableItem item, bool returning)
+        {
+            if (item != _dragged) return;
+            _dragged = null;
+
+            if (_removalPending)
+            {
+                _removalPending = false;
+                if (returning) CollapsePlaceholder(item, false); // when consuming, the slot stays collapsed
+            }
+
+            if (returning && _currentIndex != _startIndex) OrderChanged?.Invoke(_items);
         }
 
         internal void NotifyRemovalFinished(DraggableItem item)

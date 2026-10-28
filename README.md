@@ -6,7 +6,7 @@ Unity 6 utility package (`com.giana.unityutils`) providing:
 - **SceneInitialization**: a bootstrapper + `LoadingManager` that loads scenes asynchronously behind a fade overlay and runs an *ordered, awaitable* initialization pass on every scene.
 - **TooltipSystem**: dynamic cursor-following tooltip system with quadrant pivot flipping, configurable delays, and TMP formatting.
 - **UI**: gamepad/keyboard/mouse/touch menu navigation (static and data-driven menus), selection animations, and staggered enter/exit transitions.
-- **DraggableList**: drag-to-reorder lists and grids with cross-list transfer, drag-out deletion with optional confirmation, and pluggable animation.
+- **DraggableList**: drag-to-reorder lists and grids with cross-list transfer, drag-out deletion with optional confirmation, drop zones (buy button, enemy, discard pile) and pluggable animation.
 - **Integration**: optional adapters for DOTween and Feel (MoreMountains).
 - **Editor**: automatic detection of optional dependencies and scripting-define management.
 

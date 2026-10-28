@@ -9,7 +9,8 @@ Drag-to-reorder lists and grids for uGUI: reorder by dragging, move items betwee
 | File | Role |
 |---|---|
 | `DraggableList.cs` | Container logic: reordering, cross-list transfer, removal, events |
-| `DraggableItem.cs` | One entry. Lifts its visual out of the layout while dragged |
+| `DraggableItem.cs` | One entry. Lifts its visual out of the layout while dragged. Also works without a list |
+| `DropZone.cs` | Drop target that triggers events: buy button, enemy, discard pile |
 | `DragAnimatorBase.cs` | Animation abstraction (`Move`, `Placeholder`, `Removal` channels) |
 | `DefaultDragAnimator.cs` | Dependency-free coroutine animator (unscaled time), added automatically |
 | `RemovalConfirmationBase.cs` | Contract for a delete confirmation dialog |
@@ -51,7 +52,7 @@ Optional adapters: `DOTweenDragAnimator` and `FeelDragFeedback`, see [Integratio
 | Removal Logic | Dragging Out Removes Entry, Distance Until Remove, Confirm Removal, Confirmation, Destroy On Remove | Distance is measured from the container's edge |
 | Removal Animation | Remove Duration, Remove Ease | Scale to zero |
 
-On `DraggableItem`: *Drag Threshold* (pixels), *Draggable* (toggle at runtime via `Draggable`).
+On `DraggableItem`: *Drag Threshold* (pixels), *Draggable* (toggle at runtime via `Draggable`), *Tag* and `Payload` (data for drop zones).
 
 ## Code
 
@@ -81,6 +82,42 @@ void Add() => _list.AddItem(Instantiate(_prefab));
 
 Events are per instance, there are no static events.
 
+## Drop zones (buy button, enemy, discard pile)
+
+`DropZone` turns "release the item here" into an event. It works for items inside a list (a hand of cards that still reorders) and for **standalone items** with no list at all.
+
+1. Add `DropZone` to the target and pick a **Mode**:
+   - `UI`: the pointer is inside the zone's `RectTransform` (a button, a panel, a pile).
+   - `World3D` / `World2D`: a ray from the pointer through the camera must hit a collider on the zone (enemies in the scene). Put zone colliders on their own layer and set *Layer Mask* so nothing else blocks the ray. Trigger colliders work.
+2. Choose what happens to an accepted item: **Return Home** (it slides back) or **Remove** (it is consumed with the removal animation).
+3. React with `ItemDropped` / the `On Item Dropped` UnityEvent. Read your data from `item.Payload`.
+
+```csharp
+void Start()
+{
+    _buyZone.Validator = item => _wallet.CanAfford((ShopEntry)item.Payload);
+    _buyZone.ItemDropped += item =>
+    {
+        _wallet.Buy((ShopEntry)item.Payload);
+        item.Remove();               // consume it; without this the zone's action is applied
+    };
+}
+```
+
+| Feature | How |
+|---|---|
+| Filter by kind | `Accepted Tags` on the zone, `Tag` on the item (empty list accepts everything) |
+| Filter by rule | `Validator` (e.g. can the player afford it) |
+| Hover feedback | `On Hover Valid` / `On Hover Invalid` / `On Hover End`, or `HoverChanged(item, state)`. A rejected zone shows *Invalid* and a drop there simply returns the item |
+| Overlapping zones | `Priority`, highest wins. Only that zone is considered |
+| Consume yourself | `item.Remove()` in a handler |
+
+While an item hovers a valid zone, reordering and drag-out removal are paused so the list does not shuffle under it. Hand-of-cards example: the hand is a `DraggableList`, the discard pile a `DropZone` with *Remove*, the enemy a `World2D` zone with *Return Home* whose handler applies damage.
+
+### Standalone items
+
+Remove the list and fill the **Standalone** section on `DraggableItem` (root canvas, drag layer, return/remove timing). The item then lifts, follows the pointer, shows hover feedback, and returns home or is consumed. Use it for a single draggable card or a loot icon.
+
 ## Removal confirmation
 
 Enable *Confirm Removal* and put a `RemovalConfirmationPopup` in the scene (assign *Confirm* / *Cancel* buttons and a `CanvasGroup`). It hides itself on start and renders above the drag layer (sorting 600). Assign it in the list, or leave the field empty to use the first one found. For a custom dialog derive from `RemovalConfirmationBase` and call exactly one of the two callbacks. While a confirmation is open, dragging is locked on that list; cancelling slides the item back.
@@ -94,6 +131,7 @@ Derive from `DragAnimatorBase` (same idea as `MenuAnimatorBase`). Contract: `Pla
 - **Scroll views:** a draggable item takes the drag from a parent `ScrollRect`. Keep a scroll area (or handle) outside the items, or scroll with the wheel/gamepad.
 - `Contents` should not have its own Canvas on another sorting layer; if it has one it is used and restored afterwards.
 - Items are matched to the layout by sibling order, other non-draggable children in the container are fine.
+- Drop zones are only checked while an item is dragged; `World2D` needs the 2D physics module enabled (default).
 - Cross-list moves are decided on drop (the target list is found by geometry, not raycasts). Items of different size in different lists reflow when the item settles.
 - Placeholder and neighbour animations run on unscaled time.
 - Drag sorting order (500) and popup (600) are below the `LoadingManager` overlay; keep your own canvases consistent.

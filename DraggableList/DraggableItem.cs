@@ -12,6 +12,10 @@ namespace Giana.UnityUtils
     /// The visible part lives in a child (<c>Contents</c>) that is lifted out to the drag layer while dragging,
     /// so the layout never has to follow the pointer.
     /// </para>
+    /// <para>
+    /// An item does not need a list: without one it works standalone (set the Standalone fields) and can be
+    /// dropped on <see cref="DropZone"/>s, e.g. a card played onto an enemy.
+    /// </para>
     /// </summary>
     [DisallowMultipleComponent]
     public class DraggableItem : MonoBehaviour, IInitializePotentialDragHandler, IBeginDragHandler, IDragHandler, IEndDragHandler
@@ -22,6 +26,24 @@ namespace Giana.UnityUtils
         [Tooltip("Pixels the pointer must travel before the item is lifted.")]
         [SerializeField, Min(0f)] private float _dragThreshold = 10f;
         [SerializeField] private bool _draggable = true;
+
+        [Header("Identity")]
+        [Tooltip("Matched against DropZone accepted tags (e.g. \"Weapon\").")]
+        [SerializeField] private string _tag = "";
+
+        [Header("Standalone (only used when the item is not in a DraggableList)")]
+        [Tooltip("Empty = the root canvas of this item.")]
+        [SerializeField] private Canvas _rootCanvas;
+        [Tooltip("Where the lifted visual lives. Empty = the root canvas.")]
+        [SerializeField] private RectTransform _dragLayer;
+        [SerializeField] private int _dragSortingOrder = 500;
+        [Tooltip("Optional. If empty, a DefaultDragAnimator is added to this object.")]
+        [SerializeField] private DragAnimatorBase _animator;
+        [SerializeField, Min(0f)] private float _returnDuration = 0.15f;
+        [SerializeField] private AnimationCurve _returnEase = AnimationCurve.EaseInOut(0, 0, 1, 1);
+        [SerializeField, Min(0f)] private float _removeDuration = 0.2f;
+        [SerializeField] private AnimationCurve _removeEase = AnimationCurve.EaseInOut(0, 0, 1, 1);
+        [SerializeField] private bool _destroyOnRemove = true;
 
         [Header("References")]
         [SerializeField] private RectTransform _rectTransform;
@@ -45,6 +67,30 @@ namespace Giana.UnityUtils
             set => _draggable = value;
         }
 
+        /// <summary>Free-form label used by <see cref="DropZone"/> tag filters.</summary>
+        public string Tag
+        {
+            get => _tag;
+            set => _tag = value;
+        }
+
+        /// <summary>Runtime data you attach (shop entry, card, ...). Read it back in drop handlers.</summary>
+        public object Payload { get; set; }
+
+        /// <summary>
+        /// Deletes the item with the removal animation (list or standalone). Call it from a drop handler to consume the item.
+        /// </summary>
+        public void Remove()
+        {
+            if (_removing || _isDragging) return;
+            _removing = true;
+
+            if (_list != null && _list.IndexOf(this) >= 0)
+                _list.RemoveItem(this);
+            else
+                PlayRemoval(RemoveDuration, RemoveEase, DestroyOnRemove);
+        }
+
         /// <summary>Raised when the item leaves its slot (after the drag threshold).</summary>
         public event Action<DraggableItem> Lifted;
         /// <summary>Raised when the pointer is released, before the item returns, moves or is removed.</summary>
@@ -55,6 +101,10 @@ namespace Giana.UnityUtils
         #region State
 
         private DraggableList _list;
+        private DropZone _hoverZone;
+        private bool _removing;
+        private DragAnimatorBase _standaloneAnimator;
+        private Canvas _standaloneCanvas;
 
         private bool _armed;
         private bool _isDragging;
@@ -86,14 +136,56 @@ namespace Giana.UnityUtils
         private float _bMinW, _bMinH, _bPrefW, _bPrefH, _bFlexW, _bFlexH;
         private bool _bIgnore;
 
+        // Everything that depends on the owner is resolved here: the list when there is one, our own fields otherwise.
         private DragAnimatorBase Animator
         {
             get
             {
-                if (_list == null) return null;
-                var animator = _list.Animator;
+                DragAnimatorBase animator;
+                if (_list != null) animator = _list.Animator;
+                else
+                {
+                    EnsureStandalone();
+                    animator = _standaloneAnimator;
+                }
                 return animator != null ? animator : null; // real null, so ?. is safe
             }
+        }
+
+        private RectTransform DragLayer => _list != null
+            ? _list.DragLayer
+            : _dragLayer != null ? _dragLayer : (RectTransform)_standaloneCanvas.transform;
+
+        private Camera EventCamera => _list != null
+            ? _list.EventCamera
+            : _standaloneCanvas == null || _standaloneCanvas.renderMode == RenderMode.ScreenSpaceOverlay ? null : _standaloneCanvas.worldCamera;
+
+        private int DragSortingOrder => _list != null ? _list.DragSortingOrder : _dragSortingOrder;
+        private float ReturnDuration => _list != null ? _list.SwapDuration : _returnDuration;
+        private AnimationCurve ReturnEase => _list != null ? _list.SwapEase : _returnEase;
+        private float RemoveDuration => _list != null ? _list.RemoveDuration : _removeDuration;
+        private AnimationCurve RemoveEase => _list != null ? _list.RemoveEase : _removeEase;
+        private bool DestroyOnRemove => _list != null ? _list.DestroyOnRemove : _destroyOnRemove;
+
+        private bool EnsureStandalone()
+        {
+            if (_standaloneCanvas == null)
+            {
+                _standaloneCanvas = _rootCanvas != null ? _rootCanvas : null;
+                if (_standaloneCanvas == null)
+                {
+                    var parent = GetComponentInParent<Canvas>();
+                    if (parent != null) _standaloneCanvas = parent.rootCanvas;
+                }
+            }
+
+            if (_standaloneAnimator == null)
+            {
+                _standaloneAnimator = _animator != null ? _animator : GetComponent<DragAnimatorBase>();
+                if (_standaloneAnimator == null) _standaloneAnimator = gameObject.AddComponent<DefaultDragAnimator>();
+            }
+
+            return _standaloneCanvas != null;
         }
 
         #endregion
@@ -139,6 +231,7 @@ namespace Giana.UnityUtils
         {
             _armed = false;
             Animator?.KillAll(this);
+            SetHoverZone(null);
 
             if (_isDragging)
             {
@@ -182,6 +275,7 @@ namespace Giana.UnityUtils
             if (_placeholderLayout != null) _placeholderLayout.ignoreLayout = false;
             _isDragging = false;
             _armed = false;
+            _removing = false;
         }
 
         #endregion
@@ -210,12 +304,16 @@ namespace Giana.UnityUtils
             {
                 if (!_armed) return;
                 if ((eventData.position - eventData.pressPosition).sqrMagnitude < _dragThreshold * _dragThreshold) return;
-                if (!_list.CanStartDrag(this)) return;
+                if (_list != null && !_list.CanStartDrag(this)) return;
                 Lift(eventData);
             }
 
             MoveWithPointer(eventData);
-            _list.HandleDrag(this, eventData);
+
+            DropZone zone = DropZone.Find(eventData);
+            SetHoverZone(zone);
+            bool overValidZone = zone != null && zone.CanAccept(this);
+            if (_list != null) _list.HandleDrag(this, eventData, overValidZone);
         }
 
         public void OnEndDrag(PointerEventData eventData)
@@ -229,10 +327,39 @@ namespace Giana.UnityUtils
             if (!wasDragging) return;
 
             Dropped?.Invoke(this);
-            _list.HandleDrop(this, eventData);
+
+            DropZone zone = DropZone.Find(eventData);
+            SetHoverZone(null);
+
+            if (zone != null && zone.CanAccept(this))
+            {
+                bool consume = zone.Action == DropAction.Remove;
+                if (_list != null) _list.HandleDroppedOnZone(this, !consume);
+
+                zone.Receive(this);
+
+                // A handler may already have consumed the item (item.Remove()); otherwise apply the zone's action.
+                if (!_removing)
+                {
+                    if (consume) Remove();
+                    else AnimateReturn(ReturnDuration, ReturnEase);
+                }
+                return;
+            }
+
+            if (_list != null) _list.HandleDrop(this, eventData);
+            else AnimateReturn(ReturnDuration, ReturnEase);
         }
 
-        private bool CanInteract => _draggable && _list != null && _contents != null;
+        private void SetHoverZone(DropZone zone)
+        {
+            if (zone == _hoverZone) return;
+            if (_hoverZone != null) _hoverZone.NotifyHoverEnd(this);
+            _hoverZone = zone;
+            if (_hoverZone != null) _hoverZone.NotifyHoverStart(this);
+        }
+
+        private bool CanInteract => _draggable && _contents != null && (_list != null || EnsureStandalone());
 
         #endregion
 
@@ -247,7 +374,7 @@ namespace Giana.UnityUtils
             _placeholderFraction = 1f;
             ApplyPlaceholder();
 
-            RectTransform layer = _list.DragLayer;
+            RectTransform layer = DragLayer;
 
             // Remember where the contents are so we can recreate the same size and place under the layer.
             Vector3 pivotWorld = _contents.position;
@@ -271,7 +398,7 @@ namespace Giana.UnityUtils
             if (_addedCanvas) _dragCanvas = _contents.gameObject.AddComponent<Canvas>();
             else { _prevOverride = _dragCanvas.overrideSorting; _prevOrder = _dragCanvas.sortingOrder; }
             _dragCanvas.overrideSorting = true;
-            _dragCanvas.sortingOrder = _list.DragSortingOrder;
+            _dragCanvas.sortingOrder = DragSortingOrder;
 
             // The lifted visual must never block what is under it.
             _dragGroup = _contents.GetComponent<CanvasGroup>();
@@ -281,17 +408,17 @@ namespace Giana.UnityUtils
             _dragGroup.blocksRaycasts = false;
 
             // Keep the grab point under the pointer, no jump.
-            RectTransformUtility.ScreenPointToWorldPointInRectangle(layer, eventData.position, _list.EventCamera, out Vector3 pointerWorld);
+            RectTransformUtility.ScreenPointToWorldPointInRectangle(layer, eventData.position, EventCamera, out Vector3 pointerWorld);
             _grabOffset = _contents.position - pointerWorld;
 
-            _list.NotifyLifted(this);
+            if (_list != null) _list.NotifyLifted(this);
             Lifted?.Invoke(this);
         }
 
         private void MoveWithPointer(PointerEventData eventData)
         {
             if (!_detached) return;
-            RectTransformUtility.ScreenPointToWorldPointInRectangle(_list.DragLayer, eventData.position, _list.EventCamera, out Vector3 pointerWorld);
+            RectTransformUtility.ScreenPointToWorldPointInRectangle(DragLayer, eventData.position, EventCamera, out Vector3 pointerWorld);
             _contents.position = pointerWorld + _grabOffset;
         }
 
