@@ -6,6 +6,7 @@ Unity 6 utility package (`com.giana.unityutils`) providing:
 - **SceneInitialization**: a bootstrapper + `LoadingManager` that loads scenes asynchronously behind a fade overlay and runs an *ordered, awaitable* initialization pass on every scene.
 - **TooltipSystem**: dynamic cursor-following tooltip system with quadrant pivot flipping, configurable delays, and TMP formatting.
 - **UI**: gamepad/keyboard/mouse/touch menu navigation (static and data-driven menus), selection animations, and staggered enter/exit transitions.
+- **DraggableList**: drag-to-reorder lists and grids with cross-list transfer, drag-out deletion with optional confirmation, drop zones (buy button, enemy, discard pile) and pluggable animation.
 - **Integration**: optional adapters for DOTween and Feel (MoreMountains).
 - **Editor**: automatic detection of optional dependencies and scripting-define management.
 
@@ -47,6 +48,7 @@ SceneInitialization/              BootStrapper, LoadingManager, LoadingOverlayCo
                                   IInitializeAwake, IInitializeStart, Resources/MasterLoadingManager.prefab
 TooltipSystem/                    TooltipSystem, Tooltip, TooltipTrigger, Tooltip.prefab, showcase scene
 UI/                               UIBuilder<T>, event-system handlers, transitions, animators, Samples/
+DraggableList/                    DraggableList, DraggableItem, drag animators, removal confirmation
 Integration/DoTween/              GianaUtils.DoTween.asmdef (define: GIANAUTILS_DOTWEEN)
 Integration/Feel/                 GianaUtils.FEEL.asmdef   (define: GIANAUTILS_FEEL)
 Editor/                           Dependency detector (Editor-only assembly)
@@ -104,7 +106,8 @@ Your objects are now initialized in a deterministic order:
    ```
    (`ObjectPoolManager` is a `MonoSingleton`, so it must exist in the scene and be initialized by `LoadingManager`.)
 6. **Menus**: open `UI/Samples/Scripts/S_UISample.unity` and read [UI/README.md](./UI/README.md).
-7. **Tooltips**: create a dedicated Canvas (no `GraphicRaycaster`, `Scale With Screen Size`), add `TooltipSystem`, drop `Tooltip.prefab` as a child, and attach `TooltipTrigger` to interactive objects. See [TooltipSystem/README.md](./TooltipSystem/README.md).
+7. **Draggable lists**: add `DraggableList` to a container with a Layout Group, give each item a `DraggableItem` plus one child holding its visuals, then run *Grab List Entries*. See [DraggableList/README.md](./DraggableList/README.md).
+8. **Tooltips**: create a dedicated Canvas (no `GraphicRaycaster`, `Scale With Screen Size`), add `TooltipSystem`, drop `Tooltip.prefab` as a child, and attach `TooltipTrigger` to interactive objects. See [TooltipSystem/README.md](./TooltipSystem/README.md).
 
 ## Module documentation
 
@@ -113,6 +116,7 @@ Your objects are now initialized in a deterministic order:
 | Core | [Core/README.md](./Core/README.md) |
 | SceneInitialization | [SceneInitialization/README.md](./SceneInitialization/README.md) |
 | TooltipSystem | [TooltipSystem/README.md](./TooltipSystem/README.md) |
+| DraggableList | [DraggableList/README.md](./DraggableList/README.md) |
 | UI | [UI/README.md](./UI/README.md) (deep dive: [UI/Documentation/UIMenuSystem.md](./UI/Documentation/UIMenuSystem.md)) |
 | Integration | [Integration/README.md](./Integration/README.md) |
 | Editor | [Editor/README.md](./Editor/README.md) |
